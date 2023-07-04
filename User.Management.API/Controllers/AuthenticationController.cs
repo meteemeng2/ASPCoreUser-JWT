@@ -30,6 +30,7 @@ namespace User.Management.API.Controllers
         }
 
         [HttpPost]
+        [Route("Register")]
         public async Task<IActionResult> Register([FromBody]RegisterUser registerUser,string role)
         {
             //Check User Exist
@@ -106,6 +107,15 @@ namespace User.Management.API.Controllers
         public string test()
         {
             return "1234";
+        }
+
+        [HttpGet("randomnumber")]
+        [Authorize]
+        public IActionResult GetRandomNumber()
+        {
+            Random random = new Random();
+            int randomNumber = random.Next(1111111, 9999999);
+            return Ok(randomNumber.ToString());
         }
 
     }
