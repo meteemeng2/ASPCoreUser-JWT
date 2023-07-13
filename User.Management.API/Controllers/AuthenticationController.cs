@@ -20,7 +20,7 @@ namespace User.Management.API.Controllers
         private readonly IConfiguration _configuration;
         private readonly JwtService _jwtService;
         public AuthenticationController(UserManager<IdentityUser> userManager,
-            RoleManager<IdentityRole> roleManager , IConfiguration configuration
+            RoleManager<IdentityRole> roleManager, IConfiguration configuration
             , JwtService jwtService)
         {
             this._userManager = userManager;
@@ -31,10 +31,10 @@ namespace User.Management.API.Controllers
 
         [HttpPost]
         [Route("Register")]
-        public async Task<IActionResult> Register([FromBody]RegisterUser registerUser,string role)
+        public async Task<IActionResult> Register([FromBody] RegisterUser registerUser, string role)
         {
             //Check User Exist
-            if(registerUser == null)
+            if (registerUser == null)
             {
                 throw new ArgumentNullException(nameof(registerUser));
             }
@@ -73,37 +73,75 @@ namespace User.Management.API.Controllers
         [Route("Login")]
         public async Task<IActionResult> Login([FromBody] LoginModel loginModel)
         {
-            var user = await _userManager.FindByNameAsync(loginModel.Username);
-
-            if(user != null && await _userManager.CheckPasswordAsync(user, loginModel.Password))
+            try
             {
-                var authClaims = new List<Claim>
+                var user = await _userManager.FindByNameAsync(loginModel.Username);
+
+                if (user != null && await _userManager.CheckPasswordAsync(user, loginModel.Password))
                 {
-                    new Claim(ClaimTypes.Name,user.UserName),
-                    new Claim(JwtRegisteredClaimNames.Jti,Guid.NewGuid().ToString()),
-                };
-                var userRoles = await _userManager.GetRolesAsync(user);
-                foreach(var role in userRoles)
-                {
-                    authClaims.Add(new Claim(ClaimTypes.Role, role));
+                    var authClaims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name,user.UserName),
+                new Claim(JwtRegisteredClaimNames.Jti,Guid.NewGuid().ToString()),
+            };
+                    var userRoles = await _userManager.GetRolesAsync(user);
+                    foreach (var role in userRoles)
+                    {
+                        authClaims.Add(new Claim(ClaimTypes.Role, role));
+                    }
+
+                    var jwtToken = _jwtService.GetToken(authClaims);
+
+                    return Ok(new
+                    {
+                        token = new JwtSecurityTokenHandler().WriteToken(jwtToken),
+                        expiration = jwtToken.ValidTo
+                    });
                 }
 
-                var jwtToken = _jwtService.GetToken(authClaims);
+                return Unauthorized();
+            }
+            catch (Exception ex)
+            {
+                // Log the exception to a text file or any other logging mechanism
+                LogException(ex);
+                // Return an appropriate response to the client
+                return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while processing the request.");
+            }
+        }
 
-                return Ok(new
-                {
-                    token = new JwtSecurityTokenHandler().WriteToken(jwtToken),
-                    expiration = jwtToken.ValidTo
-                });
+        private void LogException(Exception ex)
+        {
+            // Get the base directory of the application
+            var baseDirectory = AppContext.BaseDirectory;
 
+            // Specify the file path for the log file in the root directory
+            var filePath = Path.Combine(baseDirectory, "error_log.txt");
+
+            // Build the log message
+            var logText = $"Exception: {ex.Message}\nStackTrace: {ex.StackTrace}";
+
+            // Check if there is an inner exception
+            if (ex.InnerException != null)
+            {
+                logText += $"\nInner Exception: {ex.InnerException.Message}\nInner Exception StackTrace: {ex.InnerException.StackTrace}";
             }
 
+            // Add additional exception details if available
+            if (ex.Data.Count > 0)
+            {
+                logText += "\nAdditional Exception Data:";
+                foreach (var key in ex.Data.Keys)
+                {
+                    logText += $"\n{key}: {ex.Data[key]}";
+                }
+            }
 
-            return Unauthorized();
+            // Log the exception to the specified file path
+            System.IO.File.WriteAllText(filePath, logText);
         }
 
         [HttpGet("test")]
-        [Authorize]
         public string test()
         {
             return "1234";
