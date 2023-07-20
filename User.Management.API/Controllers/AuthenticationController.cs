@@ -80,15 +80,11 @@ namespace User.Management.API.Controllers
                 if (user != null && await _userManager.CheckPasswordAsync(user, loginModel.Password))
                 {
                     var authClaims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Name,user.UserName),
-                new Claim(JwtRegisteredClaimNames.Jti,Guid.NewGuid().ToString()),
-            };
-                    var userRoles = await _userManager.GetRolesAsync(user);
-                    foreach (var role in userRoles)
                     {
-                        authClaims.Add(new Claim(ClaimTypes.Role, role));
-                    }
+                        new Claim(ClaimTypes.NameIdentifier, user.Id),
+                        new Claim(ClaimTypes.Name,user.UserName),
+                        new Claim(JwtRegisteredClaimNames.Jti,Guid.NewGuid().ToString()),
+                    };
 
                     var jwtToken = _jwtService.GetToken(authClaims);
 
