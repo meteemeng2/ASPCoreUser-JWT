@@ -15,18 +15,20 @@ namespace User.Management.API.Controllers
     [ApiController]
     public class AuthenticationController : ControllerBase
     {
+        private readonly IConfiguration _config;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IConfiguration _configuration;
         private readonly JwtService _jwtService;
         public AuthenticationController(UserManager<IdentityUser> userManager,
             RoleManager<IdentityRole> roleManager, IConfiguration configuration
-            , JwtService jwtService)
+            , JwtService jwtService, IConfiguration config)
         {
             this._userManager = userManager;
             this._roleManager = roleManager;
             this._configuration = configuration;
             this._jwtService = jwtService;
+            this._config = config;
         }
 
         [HttpPost]
@@ -76,11 +78,13 @@ namespace User.Management.API.Controllers
             try
             {
                 var user = await _userManager.FindByNameAsync(loginModel.Username);
+                var useridprot = _config.GetValue<string>("UserIdNameProtocal");
 
                 if (user != null && await _userManager.CheckPasswordAsync(user, loginModel.Password))
                 {
                     var authClaims = new List<Claim>
                     {
+                        new Claim(useridprot, user.Id),
                         new Claim(ClaimTypes.NameIdentifier, user.Id),
                         new Claim(ClaimTypes.Name,user.UserName),
                         new Claim(JwtRegisteredClaimNames.Jti,Guid.NewGuid().ToString()),
